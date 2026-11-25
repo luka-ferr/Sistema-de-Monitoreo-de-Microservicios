@@ -1,10 +1,20 @@
 
 from fastapi import FastAPI
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from services.payments_service.metrics import obtener_cpu
 import threading
 import time
+from prometheus_client import Gauge, CONTENT_TYPE_LATEST, generate_latest
+from fastapi.responses import Response
+
 
 app = FastAPI(title="Payments Service")
+
+cpu_gauge = Gauge(
+    "service_cpu_usage_percent",
+    "Uso de CPU del microservicio",
+    ["service"]
+)
 
 
 @app.get("/")
@@ -51,3 +61,15 @@ def probar_cpu():
         "mensaje": "Carga de CPU iniciada",
         "duracion_segundos": 30
     }
+
+@app.get("/metrics")
+def metricas_prometheus():
+
+    cpu = obtener_cpu()
+
+    cpu_gauge.labels(service="payments_service").set(cpu)
+
+    return Response(
+        content=generate_latest(),
+        media_type=CONTENT_TYPE_LATEST
+    )
